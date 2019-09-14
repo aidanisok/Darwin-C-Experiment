@@ -48,10 +48,10 @@ RM = /Applications/CLion.app/Contents/bin/cmake/mac/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /Users/aidan/CLionProjects/IDA3
+CMAKE_SOURCE_DIR = /Users/aidan/CLionProjects/IDA3/Darwin-C-Experiment
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /Users/aidan/CLionProjects/IDA3/cmake-build-debug
+CMAKE_BINARY_DIR = /Users/aidan/CLionProjects/IDA3/Darwin-C-Experiment/cmake-build-debug
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/aidan/CLionProjects/IDA3/cmake-build-debug/CMakeFiles /Users/aidan/CLionProjects/IDA3/cmake-build-debug/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/aidan/CLionProjects/IDA3/Darwin-C-Experiment/cmake-build-debug/CMakeFiles /Users/aidan/CLionProjects/IDA3/Darwin-C-Experiment/cmake-build-debug/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/aidan/CLionProjects/IDA3/cmake-build-debug/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/aidan/CLionProjects/IDA3/Darwin-C-Experiment/cmake-build-debug/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -150,6 +150,33 @@ Utilities.cpp.s:
 	$(MAKE) -f CMakeFiles/IDA3.dir/build.make CMakeFiles/IDA3.dir/Utilities.cpp.s
 .PHONY : Utilities.cpp.s
 
+Virtualization.o: Virtualization.cpp.o
+
+.PHONY : Virtualization.o
+
+# target to build an object file
+Virtualization.cpp.o:
+	$(MAKE) -f CMakeFiles/IDA3.dir/build.make CMakeFiles/IDA3.dir/Virtualization.cpp.o
+.PHONY : Virtualization.cpp.o
+
+Virtualization.i: Virtualization.cpp.i
+
+.PHONY : Virtualization.i
+
+# target to preprocess a source file
+Virtualization.cpp.i:
+	$(MAKE) -f CMakeFiles/IDA3.dir/build.make CMakeFiles/IDA3.dir/Virtualization.cpp.i
+.PHONY : Virtualization.cpp.i
+
+Virtualization.s: Virtualization.cpp.s
+
+.PHONY : Virtualization.s
+
+# target to generate assembly for a file
+Virtualization.cpp.s:
+	$(MAKE) -f CMakeFiles/IDA3.dir/build.make CMakeFiles/IDA3.dir/Virtualization.cpp.s
+.PHONY : Virtualization.cpp.s
+
 main.o: main.cpp.o
 
 .PHONY : main.o
@@ -189,6 +216,9 @@ help:
 	@echo "... Utilities.o"
 	@echo "... Utilities.i"
 	@echo "... Utilities.s"
+	@echo "... Virtualization.o"
+	@echo "... Virtualization.i"
+	@echo "... Virtualization.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"

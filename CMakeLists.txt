@@ -3,4 +3,4 @@ project(IDA3)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(IDA3 main.cpp Utilities.h Utilities.cpp)
+add_executable(IDA3 main.cpp Utilities.h Utilities.cpp Virtualization.cpp Virtualization.h)

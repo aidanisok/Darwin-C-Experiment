@@ -15,6 +15,10 @@
 #define INVALID_PORT_RANGE -4
 #define INVALID_INSTRUCTION_ARGUMENTS -72
 
+int InitialiseVirtualMachine()
+{
+
+}
 
 int ScanPorts(char**arguments)
 {
