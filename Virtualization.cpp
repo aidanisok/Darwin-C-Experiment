@@ -4,7 +4,6 @@
 
 #include "Virtualization.h"
 
-#include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -12,6 +11,11 @@
 #include <signal.h>
 #include <unistd.h>
 #include <fcntl.h>
+
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/termios.h>
+#include <sys/mman.h>
 
 /* CPU Registers
  * 8 General Purpose Registers */
@@ -57,6 +61,24 @@ enum {
     OP_TRAP    /* execute trap */
 };
 
+/* Memory Mapped Registers */
+enum
+{
+    MR_KBSR = 0xFE00, /* keyboard status */
+    MR_KBDR = 0xFE02  /* keyboard data */
+};
+
+/* TRAP Codes */
+enum
+{
+    TRAP_GETC = 0x20,  /* get character from keyboard, not echoed onto the terminal */
+    TRAP_OUT = 0x21,   /* output a character */
+    TRAP_PUTS = 0x22,  /* output a word string */
+    TRAP_IN = 0x23,    /* get character from keyboard, echoed onto the terminal */
+    TRAP_PUTSP = 0x24, /* output a byte string */
+    TRAP_HALT = 0x25   /* halt the program */
+};
+
 
 /* Initialise Virtual Memory */
 uint16_t virtualMemory[UINT16_MAX];
@@ -64,12 +86,13 @@ uint16_t virtualMemory[UINT16_MAX];
 /* Initialise Register Storage */
 uint16_t virtualRegisters[RegisterCount];
 
+using namespace std;
 
 /* CPU Functions/Instructions */
 /* Sign Extended */
 uint16_t SignExtended(uint16_t x, int bit_count)
 {
-    if((x>>(bit_count-1) & 1))
+    if(( x >> (bit_count - 1) & 1 ))
     {
         x |= (0xFFFF << bit_count);
     } return x;
@@ -95,23 +118,115 @@ uint16_t WriteToMemory(uint16_t address, uint16_t value)
     return virtualMemory[address];
 }
 
-template <unsigned op>
-void ExecuteInstruction(uint16_t instruction)
+/* Input Buffering */
+struct termios original_tio;
+
+void restore_input_buffering()
 {
+    tcsetattr(STDIN_FILENO, TCSANOW, &original_tio);
+}
 
-    uint16_t opbit = ( 1 << op );
+void disable_input_buffering()
+{
+    tcgetattr(STDIN_FILENO, &original_tio);
+    struct termios new_tio = original_tio;
+    new_tio.c_lflag &= ~ICANON & ~ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
+}
 
-    if( 0x0002 & opbit ) //ADD r0 = r1 + r2
-    {
-        virtualRegisters[RegisterR0] = virtualRegisters[RegisterR1] + virtualRegisters[RegisterR2];
-    }
-
+/* Handle Interrupt */
+void handle_interrupt(int signal)
+{
+    restore_input_buffering();
+    printf("\n");
+    exit(-2);
 }
 
 
-int init()
+template <unsigned op>
+void execIns(uint16_t instruction)
 {
-    while(true)
+    uint16_t r0, r1, r2, imm5, imm_flag;
+    uint16_t pc_plus_off, base_plus_off;
+
+    uint16_t opbit = ( 1 << op );
+
+    if(0x4EEE & opbit ) { r0 = (instruction >> 9) & 0x7; }
+    if(0x12E3 & opbit ) { r1 = (instruction >> 6) & 0x7; }
+    if(0x0022 & opbit )
+    {
+        r2 = instruction & 0x7;
+        imm_flag = (instruction >> 5) & 0x1;
+        imm5 = SignExtended((instruction) & 0x1F, 5);
+    }
+    if(0x00C0 & opbit )
+    {
+        base_plus_off = virtualRegisters[RegisterR1] + SignExtended(instruction & 0x3f, 6);
+    }
+    if(0x4C0D & opbit )
+    {
+        // Indirect address
+        pc_plus_off = virtualRegisters[RegisterPC] + SignExtended(instruction & 0x1ff, 9);
+    }
+    if(0x0001 & opbit )
+    {
+        // BR
+        uint16_t cond = (instruction >> 9) & 0x7;
+        if (cond & virtualRegisters[RegisterCond]) { virtualRegisters[RegisterPC] = pc_plus_off; }
+    }
+
+    //ADD Operation (r0 = r1+r2)
+    if(0x0002 & opbit )
+    {
+        if (imm_flag) {
+            virtualRegisters[RegisterR0] = virtualRegisters[RegisterR1] + imm5;
+        } else {
+            virtualRegisters[RegisterR0] = virtualRegisters[RegisterR1] + virtualRegisters[RegisterR2];
+        }
+    }
+
+    //AND Operation (r0 = r1&r2)
+    if(0x0020 & opbit)
+    {
+        if(imm_flag)
+        {
+            virtualRegisters[RegisterR0] = virtualRegisters[r1] & imm5;
+        } else {
+            virtualRegisters[RegisterR0] = virtualRegisters[r1] & virtualRegisters[r2];
+        }
+
+    }
+
+    //NOT Operation (r0 = ~r1)
+    if(0x0200 & opbit)
+    {
+        virtualRegisters[RegisterR0] = ~virtualRegisters[RegisterR1];
+    }
+}
+
+
+/* Op Table */
+static void (*op_table[16])(uint16_t) = {
+        execIns<0>, execIns<1>, execIns<2>, execIns<3>,
+        execIns<4>, execIns<5>, execIns<6>, execIns<7>,
+        NULL, execIns<9>, execIns<10>, execIns<11>,
+        execIns<12>, NULL, execIns<14>, execIns<15>
+};
+
+
+int VirtualMachine::StartVM(bool*continueProcess)
+{
+
+    signal(SIGINT, handle_interrupt);
+    disable_input_buffering();
+
+
+    //set the program counter register
+    enum { PC_START = 0x3000 };
+    virtualRegisters[RegisterPC] = PC_START;
+
+
+    while(&continueProcess)
     {
         //read mem pointed by program counter
         uint16_t currentInstruction = ReadFromMemory(virtualRegisters[RegisterPC]);
@@ -121,5 +236,7 @@ int init()
 
         //4 bits for op code
         uint16_t currentOperation = currentInstruction >> 12;
+
+        op_table[currentOperation](currentInstruction);
     }
 }

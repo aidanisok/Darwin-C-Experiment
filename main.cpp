@@ -7,19 +7,8 @@
 
 #include "Utilities.h"
 #include "Virtualization.h"
+#include "AppParams.h"
 
-#define SERVER_PORT 1337
-
-#define PORT_SCANNER "pscan"
-#define VIRTUAL_MACHINE "virtualm"
-
-#define INVALID_PORT_RANGE -4
-#define INVALID_INSTRUCTION_ARGUMENTS -72
-
-int InitialiseVirtualMachine()
-{
-
-}
 
 int ScanPorts(char**arguments)
 {
