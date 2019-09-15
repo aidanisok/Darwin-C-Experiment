@@ -105,6 +105,55 @@ uint16_t Swap16(uint16_t x)
     return (x << 8) | (x >> 8);
 }
 
+/* Update Flags */
+void update_flags(uint16_t r)
+{
+    if (reg[r] == 0)
+    {
+        reg[R_COND] = FL_ZRO;
+    }
+    else if (reg[r] >> 15) /* a 1 in the left-most bit indicates negative */
+    {
+        reg[R_COND] = FL_NEG;
+    }
+    else
+    {
+        reg[R_COND] = FL_POS;
+    }
+}
+
+/* Read Image File */
+void read_image_file(FILE* file)
+{
+    /* the origin tells us where in memory to place the image */
+    uint16_t origin;
+    fread(&origin, sizeof(origin), 1, file);
+    origin = Swap16(origin);
+
+    /* we know the maximum file size so we only need one fread */
+    uint16_t max_read = UINT16_MAX - origin;
+    uint16_t* p = virtualMemory + origin;
+    size_t read = fread(p, sizeof(uint16_t), max_read, file);
+
+    /* swap to little endian */
+    while (read -- > 0)
+    {
+        *p = Swap16(*p);
+        ++p;
+    }
+}
+
+/* Read Image */
+int read_image(const char* image_path)
+{
+    FILE* file = fopen(image_path, "rb");
+    if (!file) { return 0; };
+    read_image_file(file);
+    fclose(file);
+    return 1;
+}
+
+
 /* Read from memory function */
 uint16_t ReadFromMemory(uint16_t address)
 {
@@ -161,7 +210,7 @@ void execIns(uint16_t instruction)
     }
     if(0x00C0 & opbit )
     {
-        base_plus_off = virtualRegisters[RegisterR1] + SignExtended(instruction & 0x3f, 6);
+        base_plus_off = virtualRegisters[r1] + SignExtended(instruction & 0x3f, 6);
     }
     if(0x4C0D & opbit )
     {
@@ -179,9 +228,9 @@ void execIns(uint16_t instruction)
     if(0x0002 & opbit )
     {
         if (imm_flag) {
-            virtualRegisters[RegisterR0] = virtualRegisters[RegisterR1] + imm5;
+            virtualRegisters[r0] = virtualRegisters[r1] + imm5;
         } else {
-            virtualRegisters[RegisterR0] = virtualRegisters[RegisterR1] + virtualRegisters[RegisterR2];
+            virtualRegisters[r0] = virtualRegisters[r1] + virtualRegisters[r2];
         }
     }
 
@@ -190,9 +239,9 @@ void execIns(uint16_t instruction)
     {
         if(imm_flag)
         {
-            virtualRegisters[RegisterR0] = virtualRegisters[r1] & imm5;
+            virtualRegisters[r0] = virtualRegisters[r1] & imm5;
         } else {
-            virtualRegisters[RegisterR0] = virtualRegisters[r1] & virtualRegisters[r2];
+            virtualRegisters[r0] = virtualRegisters[r1] & virtualRegisters[r2];
         }
 
     }
@@ -200,7 +249,24 @@ void execIns(uint16_t instruction)
     //NOT Operation (r0 = ~r1)
     if(0x0200 & opbit)
     {
-        virtualRegisters[RegisterR0] = ~virtualRegisters[RegisterR1];
+        virtualRegisters[r0] = ~virtualRegisters[r1];
+    }
+
+    //Jump Operation (PC = r1)
+    if(0x1000 & opbit){
+        virtualRegisters[RegisterPC] = virtualRegisters[r1];
+    }
+
+    if (0x0010 & opbit)  // JSR
+    {
+        uint16_t long_flag = (instruction >> 11) & 1;
+        pc_plus_off = virtualRegisters[RegisterPC] + SignExtended(instruction & 0x7ff, 11);
+        virtualRegisters[RegisterPC] = virtualRegisters[RegisterPC];
+        if (long_flag) {
+            virtualRegisters[RegisterPC] = pc_plus_off;
+        } else {
+            virtualRegisters[RegisterPC] = virtualRegisters[r1];
+        }
     }
 }
 

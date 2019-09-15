@@ -89,8 +89,9 @@ int DetermineInstruction(int argumentCount, char**arguments)
 
     } else if(strcmp(instruction, VIRTUAL_MACHINE) == 0)
     {
-
-
+        VirtualMachine * virtualM;
+        bool * runVM; *runVM = true;
+        virtualM->StartVM(runVM);
     }
 
     return -1;
