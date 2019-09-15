@@ -58,16 +58,16 @@ enum {
 };
 
 
-/* Virtual Memory */
+/* Initialise Virtual Memory */
 uint16_t virtualMemory[UINT16_MAX];
 
-/* Register Storage */
+/* Initialise Register Storage */
 uint16_t virtualRegisters[RegisterCount];
 
 
 /* CPU Functions/Instructions */
 /* Sign Extended */
-uint16_t sign_extend(uint16_t x, int bit_count)
+uint16_t SignExtended(uint16_t x, int bit_count)
 {
     if((x>>(bit_count-1) & 1))
     {
@@ -76,31 +76,45 @@ uint16_t sign_extend(uint16_t x, int bit_count)
 }
 
 /* Swap lower 8 bits for upper 8 bits */
-uint16_t swap16(uint16_t x)
+uint16_t Swap16(uint16_t x)
 {
 
     return (x << 8) | (x >> 8);
 }
 
 /* Read from memory function */
-uint16_t read_memory(uint16_t address)
+uint16_t ReadFromMemory(uint16_t address)
 {
     return virtualMemory[address];
 }
 
 /* Write to memory function */
-uint16_t write_memory(uint16_t address, uint16_t value)
+uint16_t WriteToMemory(uint16_t address, uint16_t value)
 {
     virtualMemory[address] = value;
     return virtualMemory[address];
 }
 
+template <unsigned op>
+void ExecuteInstruction(uint16_t instruction)
+{
+
+    uint16_t opbit = ( 1 << op );
+
+    if( 0x0002 & opbit ) //ADD r0 = r1 + r2
+    {
+        virtualRegisters[RegisterR0] = virtualRegisters[RegisterR1] + virtualRegisters[RegisterR2];
+    }
+
+}
+
 
 int init()
 {
-    while(true) {
+    while(true)
+    {
         //read mem pointed by program counter
-        uint16_t currentInstruction = read_memory(virtualRegisters[RegisterPC]);
+        uint16_t currentInstruction = ReadFromMemory(virtualRegisters[RegisterPC]);
 
         //increment program counter
         virtualRegisters[RegisterPC]++;

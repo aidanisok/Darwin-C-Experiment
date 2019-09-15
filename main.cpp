@@ -6,6 +6,7 @@
 #include <netdb.h>
 
 #include "Utilities.h"
+#include "Virtualization.h"
 
 #define SERVER_PORT 1337
 
