@@ -108,17 +108,17 @@ uint16_t Swap16(uint16_t x)
 /* Update Flags */
 void update_flags(uint16_t r)
 {
-    if (reg[r] == 0)
+    if (virtualRegisters[r] == 0)
     {
-        reg[R_COND] = FL_ZRO;
+        virtualRegisters[RegisterCond] = FlagZero;
     }
-    else if (reg[r] >> 15) /* a 1 in the left-most bit indicates negative */
+    else if (virtualRegisters[r] >> 15) /* a 1 in the left-most bit indicates negative */
     {
-        reg[R_COND] = FL_NEG;
+        virtualRegisters[RegisterCond] = FlagNegative;
     }
     else
     {
-        reg[R_COND] = FL_POS;
+        virtualRegisters[RegisterCond] = FlagPositive;
     }
 }
 
@@ -292,7 +292,7 @@ int VirtualMachine::StartVM(bool*continueProcess)
     virtualRegisters[RegisterPC] = PC_START;
 
 
-    while(&continueProcess)
+    while(*continueProcess)
     {
         //read mem pointed by program counter
         uint16_t currentInstruction = ReadFromMemory(virtualRegisters[RegisterPC]);
