@@ -192,8 +192,8 @@ void handle_interrupt(int signal)
 }
 
 
-template <unsigned op>
-void execIns(uint16_t instruction)
+
+template <unsigned op> void execIns(uint16_t instruction)
 {
     uint16_t r0, r1, r2, imm5, imm_flag;
     uint16_t pc_plus_off, base_plus_off;
@@ -272,7 +272,7 @@ void execIns(uint16_t instruction)
 
 
 /* Op Table */
-static void (*op_table[16])(uint16_t) = {
+static void (*operation_table[16])(uint16_t) = {
         execIns<0>, execIns<1>, execIns<2>, execIns<3>,
         execIns<4>, execIns<5>, execIns<6>, execIns<7>,
         NULL, execIns<9>, execIns<10>, execIns<11>,
@@ -303,6 +303,8 @@ int VirtualMachine::StartVM(bool*continueProcess)
         //4 bits for op code
         uint16_t currentOperation = currentInstruction >> 12;
 
-        op_table[currentOperation](currentInstruction);
+        //run op function from table, pass instruction
+        operation_table[currentOperation](currentInstruction);
+
     }
 }
