@@ -9,5 +9,5 @@
 
 class VirtualMachine{
 public:
-    int StartVM(bool*continueProcess);
+    int StartVM(bool*continueProcess, char* filePath);
 };

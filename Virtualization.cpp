@@ -1,6 +1,8 @@
 //
 // Created by Aidan Milligan on 2019-09-14.
 //
+// Virtual machine for LC-3
+// LC-3 is an educational assembly language
 
 #include "Virtualization.h"
 
@@ -18,7 +20,12 @@
 #include <sys/mman.h>
 
 /* CPU Registers
- * 8 General Purpose Registers */
+ *
+ * 8 General Purpose Registers
+ * 1 Program Counter Register
+ * 1 Conditional Register
+ *
+ * 10 Total Register*/
 enum
 {
     RegisterR0 = 0,
@@ -41,6 +48,7 @@ enum
     FlagNegative = 1 << 2
 };
 
+/* LC-3 Opcodes */
 
 enum {
     OP_BR = 0, /* branch */
@@ -268,6 +276,79 @@ template <unsigned op> void execIns(uint16_t instruction)
             virtualRegisters[RegisterPC] = virtualRegisters[r1];
         }
     }
+    if (0x0004 & opbit) { virtualRegisters[r0] = ReadFromMemory(pc_plus_off); } // LD
+    if (0x0400 & opbit) { virtualRegisters[r0] = ReadFromMemory(ReadFromMemory(pc_plus_off)); } // LDI
+    if (0x0040 & opbit) { virtualRegisters[r0] = ReadFromMemory(base_plus_off); }  // LDR
+    if (0x4000 & opbit) { virtualRegisters[r0] = pc_plus_off; } // LEA
+    if (0x0800 & opbit) { (ReadFromMemory(pc_plus_off), virtualRegisters[r0]); } // STI
+    if (0x0080 & opbit) { WriteToMemory(base_plus_off, virtualRegisters[r0]); } // STR
+    if (0x8000 & opbit)  // TRAP
+    {
+        /* TRAP */
+        switch (instruction & 0xFF) {
+            case TRAP_GETC:
+                /* TRAP GETC */
+                /* read a single ASCII char */
+                virtualRegisters[RegisterR0] = (uint16_t) getchar();
+
+                break;
+            case TRAP_OUT: {
+                /* TRAP OUT */
+                putc((char) virtualRegisters[RegisterR0], stdout);
+                fflush(stdout);
+            }
+                break;
+            case TRAP_PUTS: {
+                /* TRAP PUTS */
+
+                /* one char per word */
+                uint16_t *c = virtualMemory + virtualRegisters[RegisterR0];
+                while (*c) {
+                    putc((char) *c, stdout);
+                    ++c;
+                }
+                fflush(stdout);
+            }
+
+                break;
+            case TRAP_IN: {
+                /* TRAP IN */
+                printf("Enter a character: ");
+                char c = getchar();
+                putc(c, stdout);
+                virtualRegisters[RegisterR0] = (uint16_t) c;
+            }
+                break;
+            case TRAP_PUTSP:
+                /* TRAP PUTSP */
+            {
+                /* one char per byte (two bytes per word)
+                   here we need to swap back to
+                   big endian format */
+                uint16_t *c = virtualMemory + virtualRegisters[RegisterR0];
+                while (*c) {
+                    char char1 = (*c) & 0xFF;
+                    putc(char1, stdout);
+                    char char2 = (*c) >> 8;
+                    if (char2) putc(char2, stdout);
+                    ++c;
+                }
+                fflush(stdout);
+            }
+
+                break;
+            case TRAP_HALT:
+                /* TRAP HALT */
+                puts("HALT");
+                fflush(stdout);
+                running = 0;
+
+                break;
+        }
+
+    }
+    //if (0x0100 & opbit) { } // RTI
+    if (0x4666 & opbit) { update_flags(r0); }
 }
 
 
@@ -280,12 +361,14 @@ static void (*operation_table[16])(uint16_t) = {
 };
 
 
-int VirtualMachine::StartVM(bool*continueProcess)
+int VirtualMachine::StartVM(bool*continueProcess, char * filePath)
 {
 
     signal(SIGINT, handle_interrupt);
     disable_input_buffering();
 
+    //load executable LC-3 image
+    read_image(filePath);
 
     //set the program counter register
     enum { PC_START = 0x3000 };
