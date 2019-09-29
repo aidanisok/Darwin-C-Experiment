@@ -341,7 +341,7 @@ template <unsigned op> void execIns(uint16_t instruction)
                 /* TRAP HALT */
                 puts("HALT");
                 fflush(stdout);
-                running = 0;
+                //running = 0;
 
                 break;
         }
