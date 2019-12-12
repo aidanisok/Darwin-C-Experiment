@@ -1,5 +1,5 @@
 //
-// Created by Aidan Milligan on 2019-09-14.
+// Created by Aidan on 2019-09-14.
 //
 // Virtual machine for LC-3
 // LC-3 is an educational assembly language
